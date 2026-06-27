@@ -1,0 +1,27 @@
+{
+  "name": "horizontal-bidirectional-gauge-card",
+  "version": "0.0.1",
+  "description": "A custom Lovelace card for Home Assistant — horizontal bidirectional gauge with customizable fill direction and gradients.",
+  "type": "module",
+  "main": "horizontal-bidirectional-gauge.js",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "dev": "node esbuild.config.mjs --watch",
+    "lint": "eslint src/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abpei/hacs_horizontal-bidirectional-gauge.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "lit": "^3.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.5.0",
+    "@typescript-eslint/parser": "^8.5.0"
+  }
+}

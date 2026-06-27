@@ -1,0 +1,52 @@
+# CI workflow — runs on every push and pull request to main/master.
+# Checks out code, installs dependencies, runs type checking and build,
+# then verifies the bundled output file exists at the repo root.
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+# Cancel in-progress runs for the same branch/PR to save CI minutes.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # ── Node.js setup ────────────────────────────────────────
+      - name: Setup Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.0
+        with:
+          node-version: 20
+          cache: npm
+
+      # ── Install dependencies ─────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Type checking ────────────────────────────────────────
+      - name: Type check (tsc --noEmit)
+        run: npx tsc --noEmit
+
+      # ── Build ────────────────────────────────────────────────
+      - name: Build with esbuild
+        run: npm run build
+
+      # ── Verify output ────────────────────────────────────────
+      - name: Verify output file exists
+        run: |
+          if [ ! -f horizontal-bidirectional-gauge.js ]; then
+            echo "::error::Build output horizontal-bidirectional-gauge.js not found"
+            exit 1
+          fi
+          echo "Build output verified: $(wc -c < horizontal-bidirectional-gauge.js) bytes"

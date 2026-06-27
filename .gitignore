@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build output (tracked by CI, not git)
+dist/
+
+# Agent/tooling files — not project content
+AGENTS.md
+IMPLEMENTATION_PLAN.md
+*.plan.md
+
+# Test artifacts
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
