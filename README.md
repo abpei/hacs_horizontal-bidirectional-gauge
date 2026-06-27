@@ -28,11 +28,15 @@ A custom Lovelace card for [Home Assistant](https://www.home-assistant.io/) that
 ### Method 1: HACS (Recommended)
 
 1. Open HACS in your Home Assistant instance.
-2. Go to **Integrations** → click the **⋮** menu (top right) → **Custom repositories**.
+2. Click the **⋮** menu (top right) → **Custom repositories**.
 3. Add this repository URL and select **Dashboard** as the category.
 4. Search for **Horizontal Bidirectional Gauge** and install it.
 5. Restart Home Assistant or clear your browser cache.
 6. Add the card to your dashboard.
+
+Or use this direct link:
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=abpei&repository=hacs_horizontal-bidirectional-gauge&category=plugin)
 
 ### Method 2: Manual Copy
 
