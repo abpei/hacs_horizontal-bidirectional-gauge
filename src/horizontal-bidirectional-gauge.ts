@@ -8,7 +8,6 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type { GaugeConfig, ResolvedGaugeConfig, HassEntity } from "./types.js";
-
 declare global {
   interface Window {
     customCards?: Array<{ type: string; name: string; description: string }>;
@@ -74,7 +73,7 @@ export class HorizontalBidirectionalGauge extends LitElement {
         ],
       },
 
-      /* Labels — text overrides for title, name, direction labels, unit, precision */
+      /* Labels — text overrides for title, direction labels, unit, precision */
       {
         type: "expandable" as const,
         name: "labels",
@@ -82,7 +81,6 @@ export class HorizontalBidirectionalGauge extends LitElement {
         flatten: true,
         schema: [
           { name: "title", selector: { text: {} } },
-          { name: "name", selector: { text: {} } },
           { name: "negative_label", selector: { text: {} } },
           { name: "positive_label", selector: { text: {} } },
           { name: "unit", selector: { text: {} } },
@@ -110,7 +108,7 @@ export class HorizontalBidirectionalGauge extends LitElement {
         ],
       },
 
-      /* Behavior — direction and animation toggles */
+      /* Behavior — direction, animation, and tap action */
       {
         type: "expandable" as const,
         name: "behavior",
@@ -119,6 +117,24 @@ export class HorizontalBidirectionalGauge extends LitElement {
         schema: [
           { name: "inverted", default: false, selector: { boolean: {} } },
           { name: "animation", default: true, selector: { boolean: {} } },
+          {
+            name: "tap_action",
+            default: "more-info",
+            selector: {
+              select: {
+                options: [
+                  { value: "more-info", label: "More-info" },
+                  { value: "toggle", label: "Toggle" },
+                  { value: "navigate", label: "Navigate" },
+                  { value: "none", label: "None" },
+                ],
+              },
+            },
+          },
+          {
+            name: "navigate_path",
+            selector: { text: {} },
+          },
         ],
       },
     ];
@@ -140,7 +156,6 @@ export class HorizontalBidirectionalGauge extends LitElement {
         zero_divider_color: "Zero divider color",
         background_color: "Background color",
         title: "Card title",
-        name: "Name override",
         negative_label: "Negative label",
         positive_label: "Positive label",
         unit: "Unit override",
@@ -426,7 +441,8 @@ export class HorizontalBidirectionalGauge extends LitElement {
     const unitDisplay = unit ? ` ${unit}` : "";
 
     return html`
-      <ha-card class="card ${isUnavailable ? "unavailable" : ""}">
+      <ha-card class="card ${isUnavailable ? "unavailable" : ""}"
+        @click=${this._handleAction}>
         ${this._renderTitleRow(displayValue, unitDisplay, entity, cfg)}
         ${this._renderBarTrack(
           zeroPosition,
@@ -454,10 +470,10 @@ export class HorizontalBidirectionalGauge extends LitElement {
     // Empty title string means user wants the title row hidden
     if (cfg.title === "") return nothing;
 
-    // Resolve display name: config title > config name > entity friendly_name > entity_id
+    // Resolve display name: config title > entity friendly_name > entity_id
     // An explicit empty title string hides the title row entirely.
     const name =
-      cfg.title ?? cfg.name ?? entity?.attributes?.friendly_name ?? cfg.entity;
+      cfg.title ?? entity?.attributes?.friendly_name ?? cfg.entity;
     // Resolve icon: config icon > entity icon > empty (no icon shown)
     const iconStr = cfg.icon || entity?.attributes?.icon || "";
 
@@ -703,6 +719,45 @@ export class HorizontalBidirectionalGauge extends LitElement {
     return value.toFixed(precision);
   }
 
+  /* ── Tap action handler ────────────────────────────────────────── */
+
+  /**
+   * Handles tap/click events on the ha-card element.
+   * Implements action handling inline to avoid importing from
+   * ha/handle-action which requires ES module resolution.
+   * Supports: more-info, toggle, navigate, none.
+   */
+  private _handleAction(ev: Event) {
+    if (!this._config || !this.hass) return;
+    const config = this._config;
+    const action = config.tap_action ?? "more-info";
+
+    if (action === "none") return;
+
+    // Dispatch the event to get the action detail
+    const detail = (ev as any).detail;
+    const actionType = detail?.action ?? "tap";
+
+    if (action === "more-info") {
+      // Fire the standard HA more-info event
+      this.dispatchEvent(
+        new CustomEvent("hass-more-info", {
+          bubbles: true,
+          composed: true,
+          detail: { entityId: config.entity },
+        })
+      );
+    } else if (action === "toggle" && config.entity) {
+      // Toggle the entity
+      const domain = config.entity.split(".")[0];
+      this.hass.callService(domain, "toggle", { entity_id: config.entity });
+    } else if (action === "navigate" && config.navigate_path) {
+      // Navigate to path
+      history.pushState(null, "", config.navigate_path);
+      this.dispatchEvent(new Event("location-changed", { bubbles: true }));
+    }
+  }
+
   /* ── Config setter (Lovelace contract) ──────────────────────────── */
 
   /**
@@ -731,7 +786,8 @@ export class HorizontalBidirectionalGauge extends LitElement {
     const precision = config.precision ?? (max >= 1000 ? 0 : 1);
     const barHeight = config.bar_height ?? DEFAULT_BAR_HEIGHT;
 
-    // Build resolved config with all defaults applied
+    // Build resolved config with all defaults applied.
+    // "type" is required by HA's handleAction to route tap actions correctly.
     this._config = {
       entity: config.entity,
       min,
@@ -747,7 +803,6 @@ export class HorizontalBidirectionalGauge extends LitElement {
       positive_label: config.positive_label ?? "",
       unit: config.unit,
       precision,
-      name: config.name ?? "",
       bar_height: barHeight,
       show_zero_divider: config.show_zero_divider ?? true,
       show_value: config.show_value ?? true,
@@ -756,6 +811,8 @@ export class HorizontalBidirectionalGauge extends LitElement {
       inverted: config.inverted ?? false,
       animation: config.animation ?? true,
       show_scale_units: config.show_scale_units ?? false,
+      tap_action: config.tap_action ?? "more-info",
+      navigate_path: config.navigate_path ?? "",
     };
   }
 

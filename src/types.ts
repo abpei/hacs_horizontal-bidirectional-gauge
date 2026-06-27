@@ -40,9 +40,6 @@ export interface GaugeConfig {
   unit?: string;
   /** Decimal places for the displayed value. Defaults to entity precision. */
   precision?: number;
-  /** Name override. Set to "" to hide. Defaults to entity friendly name. */
-  name?: string;
-
   // --- Appearance ---
   /** Bar height in pixels. */
   bar_height?: number;
@@ -61,6 +58,12 @@ export interface GaugeConfig {
   /** Show unit of measurement alongside the min/max scale labels. */
   show_scale_units?: boolean;
 
+  // --- Tap action ---
+  /** Action triggered on tap/click: more-info, toggle, navigate, none. Defaults to more-info. */
+  tap_action?: string;
+  /** Navigation path when tap_action is "navigate". e.g. "/energy". */
+  navigate_path?: string;
+
   // --- Legacy fields (ignored but kept for backward compat) ---
   /** @deprecated Use `title` instead. */
   name_override?: string;
@@ -74,6 +77,8 @@ export interface GaugeConfig {
  * Resolved configuration — all fields have concrete values after defaults are applied.
  */
 export interface ResolvedGaugeConfig {
+  /** Lovelace card type — required by HA's handleAction. */
+  type: string;
   entity: string;
   min: number;
   max: number;
@@ -88,7 +93,6 @@ export interface ResolvedGaugeConfig {
   /** Unit override. Set to "" to hide; undefined falls back to entity unit. */
   unit: string | undefined;
   precision: number;
-  name: string;
   bar_height: number;
   show_zero_divider: boolean;
   show_value: boolean;
@@ -97,6 +101,10 @@ export interface ResolvedGaugeConfig {
   inverted: boolean;
   animation: boolean;
   show_scale_units: boolean;
+  /** Tap action: more-info, toggle, navigate, none. */
+  tap_action: string;
+  /** Navigation path when tap_action is "navigate". */
+  navigate_path: string;
 }
 
 /**

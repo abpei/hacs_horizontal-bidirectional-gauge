@@ -12,6 +12,8 @@ const buildOptions = {
   minify: true,
   sourcemap: false,
   logLevel: "info",
+  // HA frontend modules are provided at runtime — exclude from bundle
+  external: ["ha/handle-action", "ha/data/lovelace"],
 };
 
 if (watch) {
