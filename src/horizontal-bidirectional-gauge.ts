@@ -331,40 +331,36 @@ export class HorizontalBidirectionalGauge extends LitElement {
       transition: left 0.3s ease, width 0.3s ease;
     }
 
-    /* Flow indicator — angled diagonal stripes that scroll in the flow direction */
-    .flow-indicator {
+    /* Flow arrows — lightweight directional arrow characters */
+    .flow-arrows {
       position: absolute;
       top: 0;
       height: 100%;
-      width: 100%;
-      overflow: hidden;
+      display: flex;
+      align-items: center;
       pointer-events: none;
+      overflow: hidden;
       border-radius: inherit;
+      white-space: nowrap;
+      letter-spacing: 0.15em;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
     }
-    .flow-indicator__stripes {
-      width: 200%;
-      height: 100%;
-      background: repeating-linear-gradient(
-        -45deg,
-        rgba(255, 255, 255, 0) 0px,
-        rgba(255, 255, 255, 0) 4px,
-        rgba(255, 255, 255, 0.25) 4px,
-        rgba(255, 255, 255, 0.25) 8px
-      );
+    .flow-arrows--left {
+      left: 0;
+      width: 100%;
     }
-    .flow-indicator--left .flow-indicator__stripes {
-      animation: flow-left 5s linear infinite;
+    .flow-arrows--right {
+      right: 0;
+      width: 100%;
+      justify-content: flex-end;
     }
-    .flow-indicator--right .flow-indicator__stripes {
-      animation: flow-right 5s linear infinite;
+    .flow-arrows--animated {
+      animation: arrow-pulse 2s ease-in-out infinite;
     }
-    @keyframes flow-right {
-      from { transform: translateX(-50%); }
-      to { transform: translateX(0%); }
-    }
-    @keyframes flow-left {
-      from { transform: translateX(0%); }
-      to { transform: translateX(-50%); }
+    @keyframes arrow-pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.8; }
     }
 
     /* Unavailable state — dim the bar and fills */
@@ -524,11 +520,9 @@ export class HorizontalBidirectionalGauge extends LitElement {
                 class="bar-track__fill bar-track__fill--negative ${animClass}"
                 style="left: ${zeroPosition - negativeFill}%; width: ${negativeFill}%; background: ${cfg.negative_color};"
               >
-                ${cfg.animation
-                  ? html`<div class="flow-indicator flow-indicator--left">
-                      <div class="flow-indicator__stripes"></div>
-                    </div>`
-                  : nothing}
+                <div class="flow-arrows flow-arrows--left ${cfg.animation ? "flow-arrows--animated" : ""}">
+                  ${"\u25C0 ".repeat(40)}
+                </div>
               </div>`
             : nothing}
           ${positiveFill > 0
@@ -536,11 +530,9 @@ export class HorizontalBidirectionalGauge extends LitElement {
                 class="bar-track__fill bar-track__fill--positive ${animClass}"
                 style="left: ${zeroPosition}%; width: ${positiveFill}%; background: ${cfg.positive_color};"
               >
-                ${cfg.animation
-                  ? html`<div class="flow-indicator flow-indicator--right">
-                      <div class="flow-indicator__stripes"></div>
-                    </div>`
-                  : nothing}
+                <div class="flow-arrows flow-arrows--right ${cfg.animation ? "flow-arrows--animated" : ""}">
+                  ${" \u25B6".repeat(40)}
+                </div>
               </div>`
             : nothing}
           ${cfg.show_zero_divider
@@ -655,15 +647,6 @@ export class HorizontalBidirectionalGauge extends LitElement {
   private _formatValue(value: number): string {
     const cfg = this._config!;
     return value.toFixed(cfg.precision);
-  }
-
-  /**
-   * Generate chevron characters to fill a given percentage of the bar.
-   * Each chevron is ~14px wide, so we generate enough to cover any bar width.
-   */
-  private _chevrons(direction: "left" | "right"): string {
-    const char = direction === "left" ? "◂ " : " ▸";
-    return char.repeat(40);
   }
 
   /**
