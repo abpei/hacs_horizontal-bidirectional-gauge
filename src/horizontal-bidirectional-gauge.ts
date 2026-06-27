@@ -30,6 +30,41 @@ const CSS_DEFAULTS: Record<string, string> = {
   background_color: "var(--secondary-background-color)",
 };
 
+/**
+ * Regex matching safe CSS color values: hex (#rgb, #rrggbb),
+ * functional notations (rgb, rgba, hsl, hsla), var() expressions,
+ * and common CSS color keywords. Anchored to reject partial matches.
+ */
+const CSS_COLOR_REGEX =
+  /^(#[0-9a-fA-F]{3,8}|(rgb|rgba|hsl|hsla)\([^)]*\)|var\(--[^)]+\)|[a-zA-Z]+)$/;
+
+/**
+ * Returns true if the value is a safe CSS color expression.
+ * Used to prevent style injection via malicious color config values.
+ */
+function isSafeColor(value: string): boolean {
+  return CSS_COLOR_REGEX.test(value);
+}
+
+/**
+ * Returns true if the navigation path is safe for use with
+ * history.pushState(). Rejects protocol-relative URLs, javascript:,
+ * data:, and vbscript: schemes. Only allows relative paths starting
+ * with '/' or './'.
+ */
+function isSafeNavigatePath(path: string): boolean {
+  if (!path) return false;
+  const trimmed = path.trim().toLowerCase();
+  if (
+    trimmed.startsWith("javascript:") ||
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("vbscript:")
+  ) {
+    return false;
+  }
+  return path.startsWith("/") || path.startsWith("./");
+}
+
 /* ── Card class ─────────────────────────────────────────────────────── */
 
 @customElement("horizontal-bidirectional-gauge")
@@ -168,6 +203,8 @@ export class HorizontalBidirectionalGauge extends LitElement {
         show_scale_units: "Show scale units",
         inverted: "Invert direction",
         animation: "Flow animation",
+        tap_action: "Tap action",
+        navigate_path: "Navigate path",
       };
       return labels[s.name] || _localize?.(`ui.panel.lovelace.editor.card.generic.${s.name}`) || s.name;
     };
@@ -202,6 +239,43 @@ export class HorizontalBidirectionalGauge extends LitElement {
         const h = Number(config.bar_height);
         if (!Number.isInteger(h) || h < 4 || h > 50) {
           throw new Error("Bar height must be between 4 and 50 pixels");
+        }
+      }
+
+      // tap_action must be one of the allowed action types
+      const allowedActions = ["more-info", "toggle", "navigate", "none"];
+      if (config.tap_action != null && !allowedActions.includes(config.tap_action as string)) {
+        throw new Error(
+          `tap_action must be one of: ${allowedActions.join(", ")}`,
+        );
+      }
+
+      // navigate_path must be a safe path when tap_action is "navigate"
+      // (XSS prevention: reject javascript:, data:, vbscript: schemes)
+      if (config.tap_action === "navigate" && config.navigate_path != null) {
+        if (
+          typeof config.navigate_path !== "string" ||
+          !isSafeNavigatePath(config.navigate_path)
+        ) {
+          throw new Error(
+            "navigate_path must start with '/' or './' — javascript:, data:, and vbscript: URLs are rejected",
+          );
+        }
+      }
+
+      // Color config values must be safe CSS expressions (style injection prevention)
+      const colorFields = [
+        "negative_color",
+        "positive_color",
+        "zero_divider_color",
+        "background_color",
+      ] as const;
+      for (const field of colorFields) {
+        const val = config[field];
+        if (val != null && typeof val === "string" && !isSafeColor(val)) {
+          throw new Error(
+            `${field} contains an invalid CSS color value — allowed: hex, rgb(), rgba(), hsl(), hsla(), var(), or CSS color keywords`,
+          );
         }
       }
     };
@@ -709,17 +783,14 @@ export class HorizontalBidirectionalGauge extends LitElement {
    * Implements action handling inline to avoid importing from
    * ha/handle-action which requires ES module resolution.
    * Supports: more-info, toggle, navigate, none.
+   * Navigate actions are sanitized before use (XSS prevention).
    */
-  private _handleAction(ev: Event) {
+  private _handleAction() {
     if (!this._config || !this.hass) return;
     const config = this._config;
     const action = config.tap_action ?? "more-info";
 
     if (action === "none") return;
-
-    // Dispatch the event to get the action detail
-    const detail = (ev as any).detail;
-    const actionType = detail?.action ?? "tap";
 
     if (action === "more-info") {
       // Fire the standard HA more-info event
@@ -735,6 +806,8 @@ export class HorizontalBidirectionalGauge extends LitElement {
       const domain = config.entity.split(".")[0];
       this.hass.callService(domain, "toggle", { entity_id: config.entity });
     } else if (action === "navigate" && config.navigate_path) {
+      // Sanitize path before navigation (defense in depth — setConfig validates too)
+      if (!isSafeNavigatePath(config.navigate_path)) return;
       // Navigate to path
       history.pushState(null, "", config.navigate_path);
       this.dispatchEvent(new Event("location-changed", { bubbles: true }));
@@ -749,7 +822,8 @@ export class HorizontalBidirectionalGauge extends LitElement {
    * Throws if entity is missing (required by Lovelace contract).
    */
   setConfig(config: GaugeConfig): void {
-    if (!config.entity) {
+    // entity is required and must be a non-empty string
+    if (!config.entity || typeof config.entity !== "string" || config.entity.trim() === "") {
       throw new Error("Entity is required");
     }
 
@@ -763,6 +837,60 @@ export class HorizontalBidirectionalGauge extends LitElement {
     }
     if (min >= max) {
       throw new Error("min must be less than max");
+    }
+
+    // precision must be an integer between 0 and 5
+    if (config.precision != null) {
+      const p = Number(config.precision);
+      if (!Number.isInteger(p) || p < 0 || p > 5) {
+        throw new Error("Precision must be between 0 and 5");
+      }
+    }
+
+    // bar_height must be an integer between 4 and 50 pixels
+    if (config.bar_height != null) {
+      const h = Number(config.bar_height);
+      if (!Number.isInteger(h) || h < 4 || h > 50) {
+        throw new Error("Bar height must be between 4 and 50 pixels");
+      }
+    }
+
+    // tap_action must be one of the allowed action types
+    const allowedActions = ["more-info", "toggle", "navigate", "none"];
+    if (config.tap_action != null && !allowedActions.includes(config.tap_action)) {
+      throw new Error(
+        `tap_action must be one of: ${allowedActions.join(", ")}`,
+      );
+    }
+
+    // Validate navigate_path for safety (XSS prevention)
+    // Reject javascript:, data:, vbscript: schemes; only allow '/' or './' paths.
+    if (
+      config.tap_action === "navigate" &&
+      config.navigate_path != null &&
+      !isSafeNavigatePath(config.navigate_path)
+    ) {
+      throw new Error(
+        "navigate_path must start with '/' or './' — javascript:, data:, and vbscript: URLs are rejected",
+      );
+    }
+
+    // Validate color config values to prevent style injection
+    const colorFields: Array<{
+      key: string;
+      value: string | undefined;
+    }> = [
+      { key: "negative_color", value: config.negative_color },
+      { key: "positive_color", value: config.positive_color },
+      { key: "zero_divider_color", value: config.zero_divider_color },
+      { key: "background_color", value: config.background_color },
+    ];
+    for (const { key, value } of colorFields) {
+      if (value != null && !isSafeColor(value)) {
+        throw new Error(
+          `${key} contains an invalid CSS color value — allowed: hex, rgb(), rgba(), hsl(), hsla(), var(), or CSS color keywords`,
+        );
+      }
     }
 
     // Precision auto-scales: 0 decimals for large ranges, 1 for smaller

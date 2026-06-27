@@ -69,7 +69,6 @@ Configure via the **visual editor** (add card → select Horizontal Bidirectiona
 | `zero_divider_color` | string | `var(--secondary-text-color)` | Color of the zero divider line. |
 | `background_color` | string | `var(--secondary-background-color)` | Background color of the bar track. |
 | `title` | string | entity name | Card title. Set to `""` to hide entirely. |
-| `name` | string | `""` | Name override. Falls back to entity friendly name. |
 | `negative_label` | string | `""` | Label on the left side (e.g. "Export"). |
 | `positive_label` | string | `""` | Label on the right side (e.g. "Import"). |
 | `unit` | string | entity unit | Unit override. Falls back to entity `unit_of_measurement`. |
