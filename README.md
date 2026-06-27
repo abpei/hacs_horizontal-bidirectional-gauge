@@ -36,11 +36,11 @@ A custom Lovelace card for [Home Assistant](https://www.home-assistant.io/) that
 
 Or use this direct link:
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=abpei&repository=hacs_horizontal-bidirectional-gauge&category=plugin)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=abpei&repository=horizontal-bidirectional-gauge&category=plugin)
 
 ### Method 2: Manual Copy
 
-1. Download `horizontal-bidirectional-gauge.js` from the [latest release](https://github.com/abpei/hacs_horizontal-bidirectional-gauge/releases/latest).
+1. Download `horizontal-bidirectional-gauge.js` from the [latest release](https://github.com/abpei/horizontal-bidirectional-gauge/releases/latest).
 2. Copy the file into your `config/www/` directory.
 3. Add the following to your `configuration.yaml` (if not already present):
 
